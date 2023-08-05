@@ -1,6 +1,5 @@
-# Demand forecast
+# Demand Forecast Projects
 
-1. dataset extract (with sample)
-2. EDA, Preprocessing
-3. baseline model,
-4. evaluation & Improvement
+1. Forecasts for Product Demand
+2. TBD
+3. TBD

@@ -41,8 +41,7 @@ class OrderPredictByCenter(GCPDataProcessor):
         self.save_idx = ['biz_ymd', 'biz_hour', 'center_dlvy', 'pred_date', 'pred_hour']
         self.storage_middle_path = "data"
         self.sql_path = "g_sql"
-
-
+        
     @staticmethod
     def _type_change(df):
         
@@ -57,8 +56,6 @@ class OrderPredictByCenter(GCPDataProcessor):
         
         return df             
     
-            
-        
     def load_data(self):
 
         """
@@ -74,31 +71,7 @@ class OrderPredictByCenter(GCPDataProcessor):
         print("start_date & end_date", self.start_date.to_date, self.end_date.to_date)
         logging.info("load the basic dataset is finished")
         return df
-    
-    def add_reserved(self):
 
-        # 함께구매 추출
-        together = GCPRead().read_table_with_sql_file(
-                'ord_cnt_by_together.sql'
-                , start_date = (self.end_date - pd.Timedelta(days=21)).to_date
-                , end_date = self.end_date.to_date
-                , SQL_PATH='g_sql'
-                , use_storage = True
-                , check_zero =False)\
-                .rename(columns={'ord_cnt':'together_ord_cnt', 'unit_cnt':'together_unit_cnt'})
-        
-        # '내일 날짜 = 예약배송 날짜 = 오늘 물류 처리'인 것만 추출
-        together = together[together['reserved_ymd'] == (self.end_date + pd.Timedelta(days = 1)).to_date]
-        together['center_cd'] = 'CC03'
-        together['dlvy_type'] = 'NON_BASIC'
-                
-        # 가장 마지막 시간인 23시 50분에 예약배송 건수를 더해줌
-        together['biz_ymd'] = pd.to_datetime(self.end_date.to_date)
-        together['biz_hour'] = 0
-        together['center_dlvy'] = together['center_cd'] + '_' + together['dlvy_type']
-        df_together = together[['biz_ymd','biz_hour','center_dlvy','together_ord_cnt','together_unit_cnt']]
-
-        return df_together
                         
     # todo: 보정 로직 검토 필요    
     def apply_conti_ord_cnt(self, df, quantile=0.9):
@@ -637,19 +610,7 @@ class OrderPredictByCenter(GCPDataProcessor):
         cols_to_zero = ['pred_cnt', 'ord_cnt', 'pred_cnt_purehit', 'ord_cnt_purehit', 'pred_sales', 'ord_sales']        
         for cols in cols_to_zero:            
             pred_res[cols] = np.where((pred_res['dlvy_stop'] == 1) & (pred_res['center_dlvy'] == 'CC03_NON_BASIC'), 0, pred_res[cols])
-            
-        # 예약 건수 추가 
-        # df_together = self.add_reserved()
-        # print('함께구매건수')
-        # print(df_together)
-        # pred_res = pred_res.rename(columns={'pred_cnt':'pred_cnt_temp'})
-        # pred_df = pred_res.merge(df_together, how = 'left', on =['biz_ymd','biz_hour','center_dlvy'])
-        # pred_df['together_ord_cnt'] = pred_df['together_ord_cnt'].fillna(0)
-        # pred_df['together_unit_cnt'] = pred_df['together_unit_cnt'].fillna(0)
-        # pred_df['pred_cnt'] = pred_df['pred_cnt_temp'] + pred_df['together_ord_cnt']
-        # pred_df['ord_cnt'] = pred_df['ord_cnt'] + pred_df['together_ord_cnt']
-        # pred_df = pred_df[['biz_ymd', 'biz_hour', 'center_dlvy', 'ord_cnt', 'ord_sales', 'ord_cnt_purehit', 'pred_cnt', 'pred_sales', 'pred_cnt_purehit', 'pred_date', 'pred_hour', 'dlvy_stop']]
-        
+
         print(pred_res)
         logging.info("postprocess is done") 
         return pred_res
